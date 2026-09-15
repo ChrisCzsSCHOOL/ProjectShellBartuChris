@@ -174,8 +174,29 @@ int execute_expression(Expression &expression)
   // External commands, executed with fork():
   // Loop over all commandos, and connect the output and input of the forked processes
 
-  // For now, we just execute the first command in the expression. Disable.
-  execute_command(expression.commands[0]);
+  pid_t pid = fork();
+
+  if (pid < 0)
+  {
+    cerr << "fork failed: " << strerror(errno) << endl;
+    abort();
+    return errno;
+  }
+
+  if (pid == 0)
+  { // child process
+    int result = execute_command(expression.commands[0]);
+    _exit(result);
+    kill(getpid(), SIGKILL);
+  }
+
+  int status;
+
+  if (waitpid(pid, &status, 0) == -1)
+  { // wait for child process to finish :P
+    cerr << "waitpid failed: " << strerror(errno) << endl;
+    return errno;
+  }
 
   return 0;
 }
@@ -217,7 +238,6 @@ int step1(bool showPrompt)
 
 int shell(bool showPrompt)
 {
-  //* <- remove one '/' in front of the other '/' to switch from the normal code to step1 code
   while (cin.good())
   {
     string commandLine = request_command_line(showPrompt);
@@ -227,7 +247,6 @@ int shell(bool showPrompt)
       cerr << strerror(rc) << endl;
   }
   return 0;
-  /*/
-  return step1(showPrompt);
-  //*/
+
+  // return step1(showPrompt);
 }
