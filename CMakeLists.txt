@@ -1,5 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
 project(shell)
-cmake_minimum_required(VERSION 3.0)
 
 OPTION(BUILD_TESTS "Build the tests" OFF)
 
