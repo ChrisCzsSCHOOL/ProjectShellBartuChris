@@ -127,8 +127,9 @@ string request_command_line(bool showPrompt)
     display_prompt();
   }
   string retval;
-  if(!getline(cin, retval)){
-    cout<<endl;
+  if (!getline(cin, retval))
+  {
+    cout << endl;
     std::exit(0);
   }
   return retval;
@@ -169,10 +170,18 @@ Expression parse_command_line(string commandLine)
 int execute_expression(Expression &expression)
 { // Check for empty expression
   if (expression.commands.size() == 0)
+  {
     return EINVAL;
+  }
 
-  // Handle intern commands (like 'cd' and 'exit')
+  // cd
+  if (expression.commands[0].parts[0] == "cd")
+  { // change directory when cd is typed
+    chdir(expression.commands[0].parts[1].c_str());
+    return 0;
+  }
 
+  // exit
   if (expression.commands[0].parts[0] == "exit")
   { // exit when exit is typed
     std::exit(0);
