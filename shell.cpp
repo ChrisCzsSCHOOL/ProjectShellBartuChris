@@ -127,7 +127,10 @@ string request_command_line(bool showPrompt)
     display_prompt();
   }
   string retval;
-  getline(cin, retval);
+  if(!getline(cin, retval)){
+    cout<<endl;
+    std::exit(0);
+  }
   return retval;
 }
 
