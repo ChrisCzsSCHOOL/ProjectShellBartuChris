@@ -164,12 +164,16 @@ Expression parse_command_line(string commandLine)
 }
 
 int execute_expression(Expression &expression)
-{
-  // Check for empty expression
+{ // Check for empty expression
   if (expression.commands.size() == 0)
     return EINVAL;
 
   // Handle intern commands (like 'cd' and 'exit')
+
+  if (expression.commands[0].parts[0] == "exit")
+  { // exit when exit is typed
+    std::exit(0);
+  }
 
   // External commands, executed with fork():
   // Loop over all commandos, and connect the output and input of the forked processes
