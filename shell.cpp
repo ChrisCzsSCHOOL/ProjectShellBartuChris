@@ -178,6 +178,12 @@ int execute_expression(Expression &expression)
   if (expression.commands[0].parts[0] == "cd")
   { // change directory when cd is typed
     chdir(expression.commands[0].parts[1].c_str());
+
+    if (errno != 0)
+    {
+      return errno;
+    }
+
     return 0;
   }
 
