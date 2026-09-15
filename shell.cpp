@@ -5,8 +5,8 @@
 	* v22.09.05
 
 	Student names:
-	- ...
-	- ...
+	- Christiaan Smits
+	- Bartu Saglamer
 */
 
 /**
