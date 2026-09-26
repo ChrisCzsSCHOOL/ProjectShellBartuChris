@@ -177,9 +177,20 @@ int execute_expression(Expression &expression)
   // cd
   if (expression.commands[0].parts[0] == "cd")
   { // change directory when cd is typed
-    chdir(expression.commands[0].parts[1].c_str());
 
-    if (errno != 0)
+    if (expression.commands[0].parts.size() < 2)
+    { // check if a directory is given
+      return EINVAL;
+    }
+
+    if (expression.commands[0].parts.size() > 2)
+    { // check if too many arguments are given
+      return EINVAL; // TODO: implement error message for too many arguments. Issue #8
+    }
+
+    int result =chdir(expression.commands[0].parts[1].c_str());
+
+    if (result == -1)
     {
       return errno;
     }
