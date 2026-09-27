@@ -299,6 +299,33 @@ int execute_expression(Expression &expression)
     if (expression.background)
       close(STDIN_FILENO);
 
+
+  // Redirect stdout to a file
+  if (!expression.outputToFile.empty())
+  {
+    int output = open(
+        expression.outputToFile.c_str(),
+        O_WRONLY | O_CREAT | O_TRUNC,
+        0644
+    );
+
+    if (output == -1)
+    {
+      cerr << expression.outputToFile << ": "
+           << strerror(errno) << endl;
+      _exit(1);
+    }
+
+    if (dup2(output, STDOUT_FILENO) == -1)
+    {
+      cerr << "dup2: " << strerror(errno) << endl;
+      close(output);
+      _exit(1);
+    }
+
+    close(output);
+  }
+
     int result = execute_command(expression.commands[0]);
     if (result != 0)
       cerr << strerror(result) << endl;
