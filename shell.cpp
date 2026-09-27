@@ -184,11 +184,11 @@ int execute_expression(Expression &expression)
     }
 
     if (expression.commands[0].parts.size() > 2)
-    { // check if too many arguments are given
+    {                // check if too many arguments are given
       return EINVAL; // TODO: implement error message for too many arguments. Issue #8
     }
 
-    int result =chdir(expression.commands[0].parts[1].c_str());
+    int result = chdir(expression.commands[0].parts[1].c_str());
 
     if (result == -1)
     {
@@ -202,6 +202,77 @@ int execute_expression(Expression &expression)
   if (expression.commands[0].parts[0] == "exit")
   { // exit when exit is typed
     std::exit(0);
+  }
+
+  // pipe
+  if (expression.commands.size() > 1)
+  {
+    int input = STDIN_FILENO;
+    vector<pid_t> children;
+
+    for (size_t i = 0; i < expression.commands.size(); ++i)
+    {
+      int pipefd[2];
+      bool hasNextCommand = i + 1 < expression.commands.size();
+
+      if (hasNextCommand && pipe(pipefd) == -1)
+      {
+        return errno;
+      }
+
+      pid_t child = fork();
+      if (child < 0)
+      {
+        return errno;
+      }
+
+      if (child == 0)
+      { // child process
+        if (input != STDIN_FILENO)
+        {
+          dup2(input, STDIN_FILENO);
+        }
+        if (hasNextCommand)
+        {
+          dup2(pipefd[1], STDOUT_FILENO);
+        }
+
+        if (input != STDIN_FILENO)
+        {
+          close(input);
+        }
+        if (hasNextCommand)
+        {
+          close(pipefd[0]);
+          close(pipefd[1]);
+        }
+
+        int result = execute_command(expression.commands[i]);
+        if (result != 0)
+          cerr << strerror(result) << endl;
+        _exit(result);
+      }
+
+      children.push_back(child);
+      if (input != STDIN_FILENO)
+      {
+        close(input);
+      }
+      if (hasNextCommand)
+      {
+        close(pipefd[1]);
+        input = pipefd[0];
+      }
+    }
+
+    if (input != STDIN_FILENO)
+      close(input);
+
+    // wait for child processes to finish
+    for (pid_t child : children)
+      waitpid(child, nullptr, 0);
+
+    return 0;
   }
 
   // External commands, executed with fork():
@@ -226,7 +297,7 @@ int execute_expression(Expression &expression)
   int status;
 
   if (waitpid(pid, &status, 0) == -1)
-  { // wait for child process to finish :P
+  { // wait for child process to finish
     cerr << "waitpid failed: " << strerror(errno) << endl;
     return errno;
   }
