@@ -228,7 +228,11 @@ int execute_expression(Expression &expression)
 
       if (child == 0)
       { // child process
-        if (input != STDIN_FILENO)
+        if (i == 0 && expression.background)
+        {
+          close(STDIN_FILENO);
+        }
+        else if (input != STDIN_FILENO)
         {
           dup2(input, STDIN_FILENO);
         }
@@ -268,9 +272,12 @@ int execute_expression(Expression &expression)
     if (input != STDIN_FILENO)
       close(input);
 
-    // wait for child processes to finish
-    for (pid_t child : children)
-      waitpid(child, nullptr, 0);
+    if (!expression.background)
+    {
+      // wait for child processes to finish
+      for (pid_t child : children)
+        waitpid(child, nullptr, 0);
+    }
 
     return 0;
   }
@@ -289,10 +296,18 @@ int execute_expression(Expression &expression)
 
   if (pid == 0)
   { // child process
+    if (expression.background)
+      close(STDIN_FILENO);
+
     int result = execute_command(expression.commands[0]);
+    if (result != 0)
+      cerr << strerror(result) << endl;
     _exit(result);
     kill(getpid(), SIGKILL);
   }
+
+  if (expression.background)
+    return 0;
 
   int status;
 
@@ -349,6 +364,12 @@ int shell(bool showPrompt)
     int rc = execute_expression(expression);
     if (rc != 0)
       cerr << strerror(rc) << endl;
+    if (showPrompt)
+    {
+      // creates a newline so an output never gets put on the same line as the prompt
+      // TODO: Check of we dit wel willen want het lost iets op maar maakt het minder mooi
+      cout << endl;
+    }
   }
   return 0;
 
