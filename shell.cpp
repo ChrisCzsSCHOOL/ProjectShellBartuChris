@@ -5,8 +5,8 @@
   * v22.09.05
 
   Student names:
-  - Bartu Saglamer
   - Christiaan Smits 1193879
+  - Bartu Saglamer 1197922
 
 */
 
@@ -169,9 +169,10 @@ Expression parse_command_line(string commandLine)
 
 int execute_expression(Expression &expression)
 { // Check for empty expression
-  if (expression.commands.size() == 0)
+  if (expression.commands.empty() ||
+    expression.commands[0].parts.empty())
   {
-    return EINVAL;
+    return 0;
   }
 
   // cd
