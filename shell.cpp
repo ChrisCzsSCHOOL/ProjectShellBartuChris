@@ -170,7 +170,7 @@ Expression parse_command_line(string commandLine)
 int execute_expression(Expression &expression)
 { // Check for empty expression
   if (expression.commands.empty() ||
-    expression.commands[0].parts.empty())
+      expression.commands[0].parts.empty())
   {
     return 0;
   }
@@ -180,15 +180,16 @@ int execute_expression(Expression &expression)
   { // change directory when cd is typed
 
     if (expression.commands[0].parts.size() < 2)
-    { // check if a directory is given
-      return EINVAL;
+    {
+      cerr << "cd: missing directory" << endl;
+      return 0;
     }
 
     if (expression.commands[0].parts.size() > 2)
-    {                // check if too many arguments are given
-      return EINVAL; // TODO: implement error message for too many arguments. Issue #8
+    {
+      cerr << "cd: too many arguments" << endl;
+      return 0;
     }
-
     int result = chdir(expression.commands[0].parts[1].c_str());
 
     if (result == -1)
@@ -468,7 +469,7 @@ int shell(bool showPrompt)
     if (showPrompt)
     {
       // creates a newline so an output never gets put on the same line as the prompt
-      cout << endl;
+      // cout << endl;
     }
   }
   return 0;
