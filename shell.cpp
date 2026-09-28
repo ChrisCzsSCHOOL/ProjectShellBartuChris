@@ -522,11 +522,6 @@ int shell(bool showPrompt)
       else
         cerr << strerror(rc) << endl;
     }
-    if (showPrompt)
-    {
-      // creates a newline so an output never gets put on the same line as the prompt
-      // cout << endl;
-    }
   }
   return 0;
 
