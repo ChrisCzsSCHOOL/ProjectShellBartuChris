@@ -467,7 +467,6 @@ int shell(bool showPrompt)
     if (showPrompt)
     {
       // creates a newline so an output never gets put on the same line as the prompt
-      // TODO: Check of we dit wel willen want het lost iets op maar maakt het minder mooi
       cout << endl;
     }
   }
