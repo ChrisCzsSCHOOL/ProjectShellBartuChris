@@ -228,13 +228,39 @@ int execute_expression(Expression &expression)
 
       if (child == 0)
       { // child process
-        if (i == 0 && expression.background)
+        if (i == 0 && !expression.inputFromFile.empty())
+        {
+          int inputFile = open(
+              expression.inputFromFile.c_str(),
+              O_RDONLY);
+
+          if (inputFile == -1)
+          {
+            cerr << expression.inputFromFile << ": "
+                 << strerror(errno) << endl;
+            _exit(1);
+          }
+
+          if (dup2(inputFile, STDIN_FILENO) == -1)
+          {
+            cerr << "dup2: " << strerror(errno) << endl;
+            close(inputFile);
+            _exit(1);
+          }
+
+          close(inputFile);
+        }
+        else if (i == 0 && expression.background)
         {
           close(STDIN_FILENO);
         }
         else if (input != STDIN_FILENO)
         {
-          dup2(input, STDIN_FILENO);
+          if (dup2(input, STDIN_FILENO) == -1)
+          {
+            cerr << "dup2: " << strerror(errno) << endl;
+            _exit(1);
+          }
         }
         if (hasNextCommand)
         {
