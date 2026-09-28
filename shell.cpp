@@ -223,7 +223,8 @@ int execute_expression(Expression &expression)
   }
 
   // cd
-  if (expression.commands[0].parts[0] == "cd")
+  if (expression.commands.size() == 1 &&
+      expression.commands[0].parts[0] == "cd")
   { // change directory when cd is typed
 
     if (expression.commands[0].parts.size() < 2)
@@ -248,7 +249,9 @@ int execute_expression(Expression &expression)
   }
 
   // exit
-  if (expression.commands[0].parts[0] == "exit")
+  if (expression.commands.size() == 1 &&
+      expression.commands[0].parts.size() == 1 &&
+      expression.commands[0].parts[0] == "exit")
   { // exit when exit is typed
     std::exit(0);
   }

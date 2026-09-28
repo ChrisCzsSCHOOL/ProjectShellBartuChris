@@ -11,7 +11,9 @@ The shell reads one line with `getline()`, parses it into an `Expression`, and e
 
 For a single command, the shell handles `cd` and `exit` in the shell process. Other commands are executed by a child created with `fork()`. The child applies input and output redirection with `open()` and `dup2()`, and then calls `execvp()`. Unless the command is a background command, the parent waits for the child with `waitpid()` before displaying the next prompt. For an empty input line, the shell does nothing and continues with the next prompt.
 
-For a pipeline, the executor loops over `expression.commands`. Before every command except the last, it calls `pipe()`. It then calls `fork()` for the command. In the child, the previous pipe read end is connected to standard input with `dup2()`, and the current pipe write end is connected to standard output with `dup2()`. The first command can instead receive input from the file named by `<`; the last command can instead send standard output to the file named by `>`. The child closes unused descriptors and calls `execvp()`. The parent closes its unused descriptors, saves every child PID, and starts all commands concurrently. For a foreground pipeline it then calls `waitpid()` for every child. For a background pipeline it returns immediately to the shell loop.
+For a pipeline, the executor loops over `expression.commands`. Before every command except the last, it calls `pipe()`. It then calls `fork()` for the command. In the child, the previous pipe read end is connected to standard input with `dup2()`, and the current pipe write end is connected to standard output with `dup2()`. The first command can instead receive input from the file named by `<`; the last command can instead send standard output to the file named by `>`. The child closes unused descriptors and calls `execvp()`. The parent closes its unused descriptors, saves every child PID, and starts all commands concurrently. For a foreground pipeline it then calls `waitpid()` for every child. For a background pipeline it returns immediately to the shell loop. 
+
+Completed background processes are reaped in the shell loop using `waitpid()` with `WNOHANG`. This prevents zombie processes without blocking the shell while background commands are still running.
 
 The system calls and related functions used are:
 
@@ -26,7 +28,7 @@ The system calls and related functions used are:
 - `waitpid()`: waits for foreground children and reaps them.
 - `exit()` and `_exit()`: terminate the shell or a child after an execution error.
 
-The project leaves cases such as `cd / | ls` underspecified. This implementation treats `cd` as a shell-level built-in whenever it is the first command, so it is intended to be used as a standalone command.
+The built-in commands cd and exit are handled directly by the shell process only when they are used as standalone commands. This is necessary because cd must change the working directory of the shell itself, while exit must terminate the shell itself. Commands inside a pipeline are executed in separate child processes.
 
 ## 2. Tests
 
@@ -46,10 +48,11 @@ The shell was tested from `test-dir`, because the test input files and expected 
 | `sleep 1 &` | return to the prompt without waiting | prompt returned immediately |
 | `does-not-exist` | display an error and continue | error was displayed and the shell continued |
 | `cd ..` followed by `pwd` | change the shell’s working directory | directory changed correctly |
+| `cd / \| ls` followed by `pwd` | execute the pipeline without changing the shell's directory | pipeline executed and the shell remained in the original directory |
 
 The provided GoogleTest target could not be rebuilt on the current system because its vendored CMake configuration requires an obsolete CMake compatibility version. The shell executable itself compiled successfully, and the functional commands above were run manually.
 
-The tests do not prove that the implementation is free of faults. An error is a mistake in the input or test procedure, such as running a relative-path test from the wrong directory. A fault is a defect in the program, such as an unhandled edge case. A failure is the observable result when a fault is executed, for example an invalid command producing an error. More tests can increase confidence, but no finite test set can cover all inputs, resource limits, or operating-system failures.
+The tests do not prove that the implementation is free of faults. An error is a human mistake, such as forgetting to close an unused pipe descriptor. This can introduce a fault in the source code, such as keeping a pipe write end open. When this fault is executed, a command may wait forever for EOF. This observable incorrect behaviour is a failure. More tests can increase confidence, but no finite test set can cover all inputs, scheduling orders, resource limits, or operating-system failures.
 
 ## 3. Infinite buffer problem
 
