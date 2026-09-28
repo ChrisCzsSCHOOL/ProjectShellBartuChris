@@ -207,7 +207,7 @@ int execute_expression(Expression &expression)
 {
   if (expression.parseError)
   {
-    return 0;
+    return EINVAL;
   }
 
   // Check for empty expression
