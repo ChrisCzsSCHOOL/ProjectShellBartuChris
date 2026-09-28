@@ -238,7 +238,32 @@ int execute_expression(Expression &expression)
         }
         if (hasNextCommand)
         {
-          dup2(pipefd[1], STDOUT_FILENO);
+        if (dup2(pipefd[1], STDOUT_FILENO) == -1){
+            cerr << "dup2: " << strerror(errno) << endl;
+            _exit(1);
+            }
+        }
+        else if (!expression.outputToFile.empty())
+        {
+          int output = open(
+              expression.outputToFile.c_str(),
+              O_WRONLY | O_CREAT | O_TRUNC,
+              0644
+          );
+        
+         if (output == -1)
+           {
+              cerr << expression.outputToFile << ": "
+                        << strerror(errno) << endl;
+                   _exit(1);
+            }
+         if (dup2(output, STDOUT_FILENO) == -1)
+           {  
+            cerr << "dup2: " << strerror(errno) << endl;
+             close(output);
+                 _exit(1);
+            }
+            close(output);
         }
 
         if (input != STDIN_FILENO)
