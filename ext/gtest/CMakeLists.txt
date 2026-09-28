@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0") 
   cmake_policy(SET CMP0135 NEW) # auto enable DOWNLOAD_EXTRACT_TIMESTAMP in ExternalProject_Add()
 endif()
@@ -16,6 +16,7 @@ ExternalProject_Add(googletest
     -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
     -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
     -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5
     -Dgtest_force_shared_crt=ON
     CMAKE_GENERATOR "Unix Makefiles"
     BUILD_COMMAND "make" "gtest" "gtest_main"

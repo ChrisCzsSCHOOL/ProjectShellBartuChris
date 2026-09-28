@@ -171,7 +171,12 @@ int execute_expression(Expression &expression)
 { // Check for empty expression
   if (expression.commands.size() == 0)
   {
-    return EINVAL;
+    return 0;
+  }
+
+  if (expression.commands[0].parts.empty())
+  {
+    return 0;
   }
 
   // cd
