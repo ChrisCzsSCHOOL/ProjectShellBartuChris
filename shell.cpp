@@ -50,6 +50,7 @@ struct Expression
   string inputFromFile;
   string outputToFile;
   bool background = false;
+  bool parseError = false;
 };
 
 // Parses a string to form a vector of arguments. The separator is a space char (' ').
@@ -135,6 +136,16 @@ string request_command_line(bool showPrompt)
   return retval;
 }
 
+bool contains_token(const vector<string> &args, const string &token)
+{
+  for (const string &arg : args)
+  {
+    if (arg == token)
+      return true;
+  }
+  return false;
+}
+
 // note: For such a simple shell, there is little need for a full-blown parser (as in an LL or LR capable parser).
 // Here, the user input can be parsed using the following approach.
 // First, divide the input into the distinct commands (as they can be chained, separated by `|`).
@@ -147,28 +158,59 @@ Expression parse_command_line(string commandLine)
   {
     string &line = commands[i];
     vector<string> args = split_string(line, ' ');
+
+    if (args.empty())
+    {
+      expression.parseError = true;
+    }
+
     if (i == commands.size() - 1 && args.size() > 1 && args[args.size() - 1] == "&")
     {
       expression.background = true;
       args.resize(args.size() - 1);
     }
-    if (i == commands.size() - 1 && args.size() > 2 && args[args.size() - 2] == ">")
+
+    if (contains_token(args, "&"))
+      expression.parseError = true;
+
+    if (contains_token(args, ">"))
     {
-      expression.outputToFile = args[args.size() - 1];
-      args.resize(args.size() - 2);
+      if (i != commands.size() - 1 || args.size() < 2 || args[args.size() - 2] != ">")
+        expression.parseError = true;
+      else
+      {
+        expression.outputToFile = args[args.size() - 1];
+        args.resize(args.size() - 2);
+      }
     }
-    if (i == 0 && args.size() > 2 && args[args.size() - 2] == "<")
+
+    if (contains_token(args, "<"))
     {
-      expression.inputFromFile = args[args.size() - 1];
-      args.resize(args.size() - 2);
+      if (i != 0 || args.size() < 2 || args[args.size() - 2] != "<")
+        expression.parseError = true;
+      else
+      {
+        expression.inputFromFile = args[args.size() - 1];
+        args.resize(args.size() - 2);
+      }
     }
+
+    if (args.empty() || contains_token(args, "<") || contains_token(args, ">"))
+      expression.parseError = true;
+
     expression.commands.push_back({args});
   }
   return expression;
 }
 
 int execute_expression(Expression &expression)
-{ // Check for empty expression
+{
+  if (expression.parseError)
+  {
+    return EINVAL;
+  }
+
+  // Check for empty expression
   if (expression.commands.size() == 0)
   {
     return 0;
@@ -464,11 +506,20 @@ int shell(bool showPrompt)
 {
   while (cin.good())
   {
+    while (waitpid(-1, nullptr, WNOHANG) > 0)
+    {
+    }
+
     string commandLine = request_command_line(showPrompt);
     Expression expression = parse_command_line(commandLine);
     int rc = execute_expression(expression);
     if (rc != 0)
-      cerr << strerror(rc) << endl;
+    {
+      if (expression.parseError)
+        cerr << "parse error" << endl;
+      else
+        cerr << strerror(rc) << endl;
+    }
     if (showPrompt)
     {
       // creates a newline so an output never gets put on the same line as the prompt
