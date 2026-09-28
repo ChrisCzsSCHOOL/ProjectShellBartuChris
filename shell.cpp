@@ -229,17 +229,68 @@ int execute_expression(Expression &expression)
 
       if (child == 0)
       { // child process
-        if (i == 0 && expression.background)
+        if (i == 0 && !expression.inputFromFile.empty())
+        {
+          int inputFile = open(
+              expression.inputFromFile.c_str(),
+              O_RDONLY);
+
+          if (inputFile == -1)
+          {
+            cerr << expression.inputFromFile << ": "
+                 << strerror(errno) << endl;
+            _exit(1);
+          }
+
+          if (dup2(inputFile, STDIN_FILENO) == -1)
+          {
+            cerr << "dup2: " << strerror(errno) << endl;
+            close(inputFile);
+            _exit(1);
+          }
+
+          close(inputFile);
+        }
+        else if (i == 0 && expression.background)
         {
           close(STDIN_FILENO);
         }
         else if (input != STDIN_FILENO)
         {
-          dup2(input, STDIN_FILENO);
+          if (dup2(input, STDIN_FILENO) == -1)
+          {
+            cerr << "dup2: " << strerror(errno) << endl;
+            _exit(1);
+          }
         }
         if (hasNextCommand)
         {
-          dup2(pipefd[1], STDOUT_FILENO);
+          if (dup2(pipefd[1], STDOUT_FILENO) == -1)
+          {
+            cerr << "dup2: " << strerror(errno) << endl;
+            _exit(1);
+          }
+        }
+        else if (!expression.outputToFile.empty())
+        {
+          int output = open(
+              expression.outputToFile.c_str(),
+              O_WRONLY | O_CREAT | O_TRUNC,
+              0644);
+
+          if (output == -1)
+          {
+            cerr << expression.outputToFile << ": "
+                 << strerror(errno) << endl;
+            _exit(1);
+          }
+          if (dup2(output, STDOUT_FILENO) == -1)
+          {
+            cerr << "dup2: " << strerror(errno) << endl;
+            close(output);
+            _exit(1);
+          }
+          close(output);
         }
 
         if (input != STDIN_FILENO)
@@ -297,8 +348,57 @@ int execute_expression(Expression &expression)
 
   if (pid == 0)
   { // child process
-    if (expression.background)
+    if (!expression.inputFromFile.empty())
+    {
+      int inputFile = open(
+          expression.inputFromFile.c_str(),
+          O_RDONLY);
+
+      if (inputFile == -1)
+      {
+        cerr << expression.inputFromFile << ": "
+             << strerror(errno) << endl;
+        _exit(1);
+      }
+
+      if (dup2(inputFile, STDIN_FILENO) == -1)
+      {
+        cerr << "dup2: " << strerror(errno) << endl;
+        close(inputFile);
+        _exit(1);
+      }
+
+      close(inputFile);
+    }
+    else if (expression.background)
+    {
       close(STDIN_FILENO);
+    }
+
+    // Redirect stdout to a file
+    if (!expression.outputToFile.empty())
+    {
+      int output = open(
+          expression.outputToFile.c_str(),
+          O_WRONLY | O_CREAT | O_TRUNC,
+          0644);
+
+      if (output == -1)
+      {
+        cerr << expression.outputToFile << ": "
+             << strerror(errno) << endl;
+        _exit(1);
+      }
+
+      if (dup2(output, STDOUT_FILENO) == -1)
+      {
+        cerr << "dup2: " << strerror(errno) << endl;
+        close(output);
+        _exit(1);
+      }
+
+      close(output);
+    }
 
     int result = execute_command(expression.commands[0]);
     if (result != 0)
@@ -368,7 +468,6 @@ int shell(bool showPrompt)
     if (showPrompt)
     {
       // creates a newline so an output never gets put on the same line as the prompt
-      // TODO: Check of we dit wel willen want het lost iets op maar maakt het minder mooi
       cout << endl;
     }
   }
